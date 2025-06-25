@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Door Grouping FS Method</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #4b5563;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        tbody tr:hover {
+            background-color: #f3f4f6;
+        }
+        .group-details {
+            margin-top: 2rem;
+            background-color: #f9fafb;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        .group-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #d1d5db;
+        }
+        .message-box {
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: none; /* Hidden by default */
+        }
+        .message-success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #34d399;
+        }
+        .message-error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        .message-info {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #38bdf8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">Door Grouping Software (FS Method)</h1>
+
+        <div id="messageBox" class="message-box"></div>
+
+        <div class="mb-6">
+            <label for="doorDataInput" class="block text-sm font-medium text-gray-700 mb-2">
+                Paste Door Data (Height TAB Width, one door per line, e.g., 2323 1108):
+            </label>
+            <textarea id="doorDataInput" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" placeholder="2323&#09;1108&#10;2353&#09;1063&#10;..."></textarea>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-4 mb-8">
+            <button id="parseDataBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105">
+                Parse Door Data
+            </button>
+            <button id="groupDoorsBtn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105">
+                Group Doors
+            </button>
+            <div class="flex items-center space-x-2">
+                <label for="startSNo" class="text-sm font-medium text-gray-700">Start S.No.:</label>
+                <input type="number" id="startSNo" value="1" min="1" class="w-20 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="flex items-center space-x-2">
+                <label for="startGroupId" class="text-sm font-medium text-gray-700">Start Group ID:</label>
+                <input type="number" id="startGroupId" value="1" min="1" class="w-24 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+            </div>
+        </div>
+
+        <div id="originalDataTable" class="mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Original Door Data</h2>
+            <div class="overflow-x-auto rounded-lg shadow-sm">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>S.No.</th>
+                            <th>Height (mm)</th>
+                            <th>Width (mm)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="originalDataBody">
+                        <tr><td colspan="3" class="text-center text-gray-500">No data parsed yet.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="groupSummaryTable" class="mb-8 hidden">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Group Summary</h2>
+            <div class="overflow-x-auto rounded-lg shadow-sm">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Group ID</th>
+                            <th>No. of Doors</th>
+                            <th>Height Range (Min-Max)</th>
+                            <th>H Diff (mm)</th>
+                            <th>W Ref (mm)</th>
+                            <th>W Tol (+/- mm)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="groupSummaryBody">
+                        <!-- Group summary rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="detailedGroupsSection" class="hidden">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Individual Door Details by Group</h2>
+            <div id="detailedGroupsBody">
+                <!-- Detailed group tables will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let parsedDoors = []; // Stores the parsed door objects
+
+        // Helper function to show messages
+        function showMessage(message, type) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.textContent = message;
+            messageBox.className = `message-box ${type}`; // Apply type class
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 5000); // Hide after 5 seconds
+        }
+
+        // Function to calculate the width reference (ending in 0 or 5)
+        function getWidthReference(width) {
+            const lowerRef = Math.floor(width / 5) * 5;
+            const upperRef = lowerRef + 5;
+            if (Math.abs(width - lowerRef) <= Math.abs(width - upperRef)) {
+                return lowerRef;
+            } else {
+                return upperRef;
+            }
+        }
+
+        // Main grouping function implementing the FS method
+        function groupDoorsFSMethod(doors, startGroupId) {
+            const groupedDoors = [];
+            let nextGroupId = parseInt(startGroupId);
+
+            // Sort doors by height then width to potentially aid first-fit, but not strictly required by first-fit
+            // This might help in creating slightly more compact groups initially
+            const sortedDoors = [...doors].sort((a, b) => {
+                if (a.height !== b.height) {
+                    return a.height - b.height;
+                }
+                return a.width - b.width;
+            });
+
+
+            for (const door of sortedDoors) {
+                let assigned = false;
+
+                // Try to fit the door into existing groups (first-fit approach)
+                for (const group of groupedDoors) {
+                    const currentGroupHeights = group.doors.map(d => d.height);
+                    const currentGroupWidths = group.doors.map(d => d.width);
+
+                    // Calculate potential min/max height if this new door is added
+                    const potentialHeights = [...currentGroupHeights, door.height];
+                    const potentialMinH = Math.min(...potentialHeights);
+                    const potentialMaxH = Math.max(...potentialHeights);
+
+                    // Check Height Tolerance: The difference between the lowest and highest height within any single group must be 10mm or less.
+                    if ((potentialMaxH - potentialMinH) <= 10) {
+                        // Check Width Tolerance: All doors within that group must have a width that is within 5mm of this group's reference width.
+                        // This check must apply to the NEW door and ALL existing doors in the group.
+                        const groupWidthRef = group.widthRef;
+                        
+                        let allWidthsWithinTolerance = true;
+                        // Check new door's width
+                        if (Math.abs(door.width - groupWidthRef) > 5) {
+                            allWidthsWithinTolerance = false;
+                        }
+                        // Check existing doors' widths against the group's fixed width reference
+                        if (allWidthsWithinTolerance) {
+                            for (const existingDoor of group.doors) {
+                                if (Math.abs(existingDoor.width - groupWidthRef) > 5) {
+                                    allWidthsWithinTolerance = false;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (allWidthsWithinTolerance) {
+                            group.doors.push(door);
+                            assigned = true;
+                            break; // Door assigned, move to the next input door
+                        }
+                    }
+                }
+
+                if (!assigned) {
+                    // Create a new group if no existing group fits
+                    const widthRef = getWidthReference(door.width);
+                    groupedDoors.push({
+                        groupId: nextGroupId++,
+                        doors: [door],
+                        widthRef: widthRef,
+                        widthTolerance: 5,
+                    });
+                }
+            }
+
+            // Prepare summary and detailed data for display
+            const groupSummaryData = [];
+            const detailedGroupsData = [];
+
+            for (const group of groupedDoors) {
+                const numDoors = group.doors.length;
+                const heights = group.doors.map(d => d.height);
+                const minH = Math.min(...heights);
+                const maxH = Math.max(...heights);
+                const hDiff = maxH - minH;
+
+                groupSummaryData.push({
+                    groupId: group.groupId,
+                    numDoors: numDoors,
+                    heightRange: `${minH}-${maxH}`,
+                    hDiff: hDiff,
+                    widthRef: group.widthRef,
+                    widthTolerance: group.widthTolerance,
+                });
+
+                // Sort doors within each group for consistent display
+                const sortedGroupDoors = [...group.doors].sort((a, b) => {
+                    if (a.height !== b.height) {
+                        return a.height - b.height;
+                    }
+                    return a.width - b.width;
+                });
+
+                detailedGroupsData.push({
+                    groupId: group.groupId,
+                    doors: sortedGroupDoors,
+                });
+            }
+
+            // Perform final validation on generated groups
+            let validationErrors = [];
+            for (const group of groupSummaryData) {
+                if (group.hDiff > 10) {
+                    validationErrors.push(`Group ${group.groupId} violates Height Tolerance (Diff: ${group.hDiff}mm).`);
+                }
+                // Width tolerance is checked during assignment, but a final check for robustness
+                const currentDetailedGroup = detailedGroupsData.find(g => g.groupId === group.groupId);
+                if (currentDetailedGroup) {
+                    for(const d of currentDetailedGroup.doors) {
+                        if (Math.abs(d.width - group.widthRef) > 5) {
+                            validationErrors.push(`Group ${group.groupId} (S.No. ${d.sNo}) violates Width Tolerance (Actual: ${d.width}, Ref: ${group.widthRef}).`);
+                        }
+                    }
+                }
+            }
+
+            return {
+                summary: groupSummaryData,
+                details: detailedGroupsData,
+                errors: validationErrors
+            };
+        }
+
+        // Event listener for Parse Data button
+        document.getElementById('parseDataBtn').addEventListener('click', () => {
+            const dataInput = document.getElementById('doorDataInput').value;
+            const startSNo = parseInt(document.getElementById('startSNo').value);
+            
+            parsedDoors = [];
+            const lines = dataInput.trim().split('\n');
+            let currentSNo = startSNo;
+
+            if (lines.length === 0 || (lines.length === 1 && lines[0].trim() === '')) {
+                showMessage("Please enter some door data.", "message-info");
+                return;
+            }
+
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (trimmedLine) {
+                    const parts = trimmedLine.split(/\s+/); // Split by one or more whitespace characters
+                    if (parts.length >= 2) {
+                        const height = parseInt(parts[0]);
+                        const width = parseInt(parts[1]);
+
+                        if (!isNaN(height) && !isNaN(width)) {
+                            parsedDoors.push({ sNo: currentSNo, height: height, width: width });
+                            currentSNo++;
+                        } else {
+                            showMessage(`Error parsing line: '${line}'. Please check height and width are numbers.`, "message-error");
+                            parsedDoors = []; // Clear partial data
+                            return;
+                        }
+                    } else {
+                        showMessage(`Error parsing line: '${line}'. Expected at least two numbers (Height Width).`, "message-error");
+                        parsedDoors = []; // Clear partial data
+                        return;
+                    }
+                }
+            }
+
+            // Display original data
+            const originalDataBody = document.getElementById('originalDataBody');
+            originalDataBody.innerHTML = '';
+            if (parsedDoors.length > 0) {
+                parsedDoors.forEach(door => {
+                    const row = `<tr><td>${door.sNo}</td><td>${door.height}</td><td>${door.width}</td></tr>`;
+                    originalDataBody.insertAdjacentHTML('beforeend', row);
+                });
+                showMessage(`Successfully parsed ${parsedDoors.length} doors.`, "message-success");
+            } else {
+                originalDataBody.innerHTML = '<tr><td colspan="3" class="text-center text-gray-500">No data parsed.</td></tr>';
+                showMessage("No valid door data found to parse.", "message-info");
+            }
+            
+            // Clear previous grouping results
+            document.getElementById('groupSummaryTable').classList.add('hidden');
+            document.getElementById('groupSummaryBody').innerHTML = '';
+            document.getElementById('detailedGroupsSection').classList.add('hidden');
+            document.getElementById('detailedGroupsBody').innerHTML = '';
+        });
+
+        // Event listener for Group Doors button
+        document.getElementById('groupDoorsBtn').addEventListener('click', () => {
+            if (parsedDoors.length === 0) {
+                showMessage("Please parse door data first.", "message-info");
+                return;
+            }
+
+            const startGroupId = document.getElementById('startGroupId').value;
+            const groupResults = groupDoorsFSMethod(parsedDoors, startGroupId);
+
+            // Display group summary
+            const groupSummaryBody = document.getElementById('groupSummaryBody');
+            groupSummaryBody.innerHTML = '';
+            if (groupResults.summary.length > 0) {
+                groupResults.summary.forEach(group => {
+                    const row = `
+                        <tr>
+                            <td>${group.groupId}</td>
+                            <td>${group.numDoors}</td>
+                            <td>${group.heightRange}</td>
+                            <td>${group.hDiff}</td>
+                            <td>${group.widthRef}</td>
+                            <td>${group.widthTolerance}</td>
+                        </tr>
+                    `;
+                    groupSummaryBody.insertAdjacentHTML('beforeend', row);
+                });
+                document.getElementById('groupSummaryTable').classList.remove('hidden');
+            } else {
+                groupSummaryBody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">No groups formed.</td></tr>';
+                document.getElementById('groupSummaryTable').classList.remove('hidden'); // Show table even if empty groups
+            }
+
+            // Display detailed groups
+            const detailedGroupsBody = document.getElementById('detailedGroupsBody');
+            detailedGroupsBody.innerHTML = '';
+            if (groupResults.details.length > 0) {
+                groupResults.details.forEach(group => {
+                    let groupHtml = `
+                        <div class="group-details mb-6">
+                            <h3 class="group-header">Group ${group.groupId}</h3>
+                            <div class="overflow-x-auto rounded-lg shadow-sm">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>S.No.</th>
+                                            <th>Height (mm)</th>
+                                            <th>Width (mm)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+                    group.doors.forEach(door => {
+                        groupHtml += `<tr><td>${door.sNo}</td><td>${door.height}</td><td>${door.width}</td></tr>`;
+                    });
+                    groupHtml += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    detailedGroupsBody.insertAdjacentHTML('beforeend', groupHtml);
+                });
+                document.getElementById('detailedGroupsSection').classList.remove('hidden');
+            }
+
+            if (groupResults.errors.length > 0) {
+                const errorMessage = "Grouping completed with errors:\n" + groupResults.errors.join('\n');
+                showMessage(errorMessage, "message-error");
+            } else {
+                showMessage(`Successfully grouped ${parsedDoors.length} doors into ${groupResults.summary.length} groups.`, "message-success");
+            }
